@@ -1,7 +1,5 @@
 import os
-import sys
 import argparse
-import langid
 import nltk
 from gtts import gTTS
 from transformers import pipeline
@@ -23,16 +21,20 @@ def extract_text_from_pdf(pdf_path, start_page, end_page):
         print(f"Error: File {pdf_path} does not exist.")
         return ""
 
-    pdf_file = open(pdf_path, "rb")
-    pdf_reader = PdfReader(pdf_file)
-    text = ""
-    for page_num in range(start_page, end_page + 1):
-        if page_num >= len(pdf_reader.pages):
-            break
-        page = pdf_reader.pages[page_num]
-        text += page.extract_text()
-    pdf_file.close()
-    return text
+    try:
+        pdf_file = open(pdf_path, "rb")
+        pdf_reader = PdfReader(pdf_file)
+        text = ""
+        for page_num in range(start_page, end_page + 1):
+            if page_num >= len(pdf_reader.pages):
+                break
+            page = pdf_reader.pages[page_num]
+            text += page.extract_text() or ""
+        pdf_file.close()
+        return text
+    except Exception as e:
+        print(f"Error: An issue occurred while reading the PDF file: {e}")
+        return ""
 
 
 def summarize_text(text):
@@ -48,9 +50,12 @@ def text_to_speech(text, output_file, lang):
         print("Error: No text to convert to speech.")
         return
 
-    tts = gTTS(text, lang=lang)
-    tts.save(output_file)
-    print(f"Success: Audio saved to {output_file}")
+    try:
+        tts = gTTS(text, lang=lang)
+        tts.save(output_file)
+        print(f"Success: Audio saved to {output_file}")
+    except Exception as e:
+        print(f"Error: An issue occurred while converting text to speech: {e}")
 
 
 def main():
@@ -73,6 +78,12 @@ def main():
         "--summarize", action="store_true", help="Summarize the text before conversion"
     )
     parser.add_argument("--verbose", action="store_true", help="Verbose output")
+    parser.add_argument(
+        "--search",
+        type=str,
+        default=None,
+        help="Keyword to search in the extracted text",
+    )
 
     args = parser.parse_args()
 
@@ -81,9 +92,13 @@ def main():
     )
     text = extract_text_from_pdf(args.pdf_path, args.start_page, args.end_page)
     if args.verbose:
-        print(
-            f"Extracted text: {text[:100]}..."
-        )
+        print(f"Extracted text preview: {text[:100]}...")
+
+    if args.search:
+        if args.search in text:
+            print(f"Keyword '{args.search}' found in the extracted text.")
+        else:
+            print(f"Keyword '{args.search}' not found in the extracted text.")
 
     if args.summarize:
         print("Summarizing text...")
