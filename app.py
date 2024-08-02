@@ -2,7 +2,6 @@ import os
 import argparse
 import nltk
 from gtts import gTTS
-from transformers import pipeline
 from PyPDF2 import PdfReader
 from sumy.parsers.plaintext import PlaintextParser
 from sumy.nlp.tokenizers import Tokenizer
@@ -10,28 +9,25 @@ from sumy.summarizers.lsa import LsaSummarizer
 
 
 def download_nltk_data():
-    try:
-        nltk.data.find("tokenizers/punkt")
-    except LookupError:
+    if not os.path.exists(nltk.data.find("tokenizers/punkt")):
         nltk.download("punkt")
 
 
 def extract_text_from_pdf(pdf_path, start_page, end_page):
-    if not os.path.exists(pdf_path):
+    if not os.path.isfile(pdf_path):
         print(f"Error: File {pdf_path} does not exist.")
         return ""
 
     try:
-        pdf_file = open(pdf_path, "rb")
-        pdf_reader = PdfReader(pdf_file)
-        text = ""
-        for page_num in range(start_page, end_page + 1):
-            if page_num >= len(pdf_reader.pages):
-                break
-            page = pdf_reader.pages[page_num]
-            text += page.extract_text() or ""
-        pdf_file.close()
-        return text
+        with open(pdf_path, "rb") as pdf_file:
+            pdf_reader = PdfReader(pdf_file)
+            text = ""
+            for page_num in range(start_page, end_page + 1):
+                if page_num >= len(pdf_reader.pages):
+                    break
+                page = pdf_reader.pages[page_num]
+                text += page.extract_text() or ""
+            return text
     except Exception as e:
         print(f"Error: An issue occurred while reading the PDF file: {e}")
         return ""
